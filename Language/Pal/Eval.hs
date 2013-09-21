@@ -59,4 +59,6 @@ atom name = EvalT $ do
 
 initialEnv :: Env
 initialEnv = Env $ map (second Function) [
+    ("+", Number . sum . map lvNumber)
+  , ("concat", String . foldl (++) "" . map lvString)
   ]

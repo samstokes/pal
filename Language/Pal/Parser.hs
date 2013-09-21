@@ -12,7 +12,7 @@ import Language.Pal.Types
 
 
 list :: Parser LValue
-list = char '(' *> (List <$> (expr `sepBy1` whitespaces)) <* char ')'
+list = char '(' *> (List <$> (expr `sepBy` whitespaces)) <* char ')'
 
 whitespace :: Parser Char
 whitespace = oneOf " \n\t"

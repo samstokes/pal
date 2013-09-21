@@ -57,8 +57,41 @@ atom name = EvalT $ do
   (lookup name $ unEnv env) ?? ("not found: " ++ name)
 
 
+data Tag =
+    TagSymbol
+  | TagList
+  | TagNumber
+  | TagString
+  | TagBool
+  | TagFunction
+  deriving (Eq)
+
+instance Show Tag where
+  show TagSymbol = "symbol"
+  show TagList = "list"
+  show TagNumber = "number"
+  show TagString = "string"
+  show TagBool = "boolean"
+  show TagFunction = "function"
+
+tag :: LValue -> Tag
+tag (Atom _) = TagSymbol
+tag (List _) = TagList
+tag (Number _) = TagNumber
+tag (String _) = TagString
+tag (Bool _) = TagBool
+tag (Function _) = TagFunction
+
+checkOne :: [LValue] -> LValue
+checkOne [v] = v
+checkOne [] = error "not enough arguments"
+checkOne _ = error "too many arguments"
+
+
 initialEnv :: Env
 initialEnv = Env $ map (second Function) [
     ("+", Number . sum . map lvNumber)
   , ("concat", String . foldl (++) "" . map lvString)
+  , ("typeof", String . show . tag . checkOne)
+  , ("numberp", Bool . (== TagNumber) . tag . checkOne)
   ]

@@ -1,10 +1,4 @@
-module Language.Pal.Types
-  ( LValue(..)
-  , LList
-  , LAtom
-  , LNumber
-  , LString
-  ) where
+module Language.Pal.Types where
 
 
 type LList = [LValue]

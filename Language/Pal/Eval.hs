@@ -6,8 +6,9 @@ module Language.Pal.Eval
   ) where
 
 import Control.Applicative
+import Control.Arrow (second)
 import Control.Error
-import Control.Monad.Error (MonadError)
+import Control.Monad.Error (MonadError, throwError)
 import Control.Monad.State
 
 import Language.Pal.Types
@@ -34,16 +35,28 @@ eval' v@(String _) = return v
 eval' v@(Bool _) = return v
 eval' (List l) = evalForm l
 eval' (Atom name) = atom name
+eval' v@(Function _) = return v
 
-evalForm :: Monad m => LList -> m LValue
+evalForm :: (Applicative m, Monad m) => LList -> EvalT m LValue
 evalForm [Atom "quote", e] = return e
+evalForm (funExp : argExps) = do
+  fun <- eval' funExp
+  args <- mapM eval' argExps
+  apply fun args
+evalForm [] = throwError "can't eval empty list"
 
 
-initialEnv :: Env
-initialEnv = Env [
-  ]
+apply :: Monad m => LValue -> [LValue] -> EvalT m LValue
+apply (Function f) args = return $ f args
+apply v _ = throwError $ "not a function: " ++ show v
+
 
 atom :: (Applicative m, Monad m) => LAtom -> EvalT m LValue
 atom name = EvalT $ do
   env <- get
   (lookup name $ unEnv env) ?? ("not found: " ++ name)
+
+
+initialEnv :: Env
+initialEnv = Env $ map (second Function) [
+  ]

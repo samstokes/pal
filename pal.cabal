@@ -23,5 +23,6 @@ executable pal
   build-depends:       base >=4.6 && <4.7
                      , parsec
                      , transformers
+  ghc-options: -Wall
   -- hs-source-dirs:      
   default-language:    Haskell2010

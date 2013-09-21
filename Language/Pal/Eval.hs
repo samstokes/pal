@@ -26,6 +26,9 @@ newtype EvalT m a = EvalT { unEvalT :: EitherT EvalError (StateT Env m) a }
 runEvalT :: Monad m => EvalT m a -> Env -> m (Either EvalError a, Env)
 runEvalT = runStateT . runEitherT . unEvalT
 
+liftEither :: Monad m => Either EvalError a -> EvalT m a
+liftEither = EvalT . hoistEither
+
 
 eval :: (Applicative m, Monad m) => LValue -> m (Either EvalError LValue, Env)
 eval val = runEvalT (eval' val) initialEnv
@@ -48,7 +51,7 @@ evalForm [] = throwError "can't eval empty list"
 
 
 apply :: Monad m => LValue -> [LValue] -> EvalT m LValue
-apply (Function f) args = return $ f args
+apply (Function f) args = liftEither $ f args
 apply v _ = throwError $ "not a function: " ++ show v
 
 
@@ -83,16 +86,16 @@ tag (String _) = TagString
 tag (Bool _) = TagBool
 tag (Function _) = TagFunction
 
-checkOne :: [LValue] -> LValue
-checkOne [v] = v
-checkOne [] = error "not enough arguments"
-checkOne _ = error "too many arguments"
+checkOne :: LFunction
+checkOne [v] = Right v
+checkOne [] = Left "not enough arguments"
+checkOne _ = Left "too many arguments"
 
 
 initialEnv :: Env
 initialEnv = Env $ map (second Function) [
-    ("+", Number . sum . map lvNumber)
-  , ("concat", String . foldl (++) "" . map lvString)
-  , ("typeof", String . show . tag . checkOne)
-  , ("numberp", Bool . (== TagNumber) . tag . checkOne)
+    ("+", Right . Number . sum . map lvNumber)
+  , ("concat", Right . String . foldl (++) "" . map lvString)
+  , ("typeof", fmap (String . show . tag) . checkOne)
+  , ("numberp", fmap (Bool . (== TagNumber) . tag) . checkOne)
   ]

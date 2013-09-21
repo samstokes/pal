@@ -28,4 +28,4 @@ type LString = String
 
 type EvalError = String
 
-type LFunction = [LValue] -> LValue
+type LFunction = [LValue] -> Either EvalError LValue

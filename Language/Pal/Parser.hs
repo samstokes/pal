@@ -1,5 +1,5 @@
 module Language.Pal.Parser
-  ( list
+  ( expr
   ) where
 
 import Control.Applicative
@@ -12,7 +12,7 @@ import Language.Pal.Types
 
 
 list :: Parser LValue
-list = char '(' *> (List <$> (value `sepBy1` whitespaces)) <* char ')'
+list = char '(' *> (List <$> (expr `sepBy1` whitespaces)) <* char ')'
 
 whitespace :: Parser Char
 whitespace = oneOf " \n\t"
@@ -20,13 +20,13 @@ whitespace = oneOf " \n\t"
 whitespaces :: Parser String
 whitespaces = many1 whitespace
 
-value :: Parser LValue
-value =     Atom <$> atom
-        <|> list
-        <|> Number <$> number
-        <|> String <$> string
-        <|> Bool <$> bool
-        <?> "value"
+expr :: Parser LValue
+expr =    Atom <$> atom
+       <|> list
+       <|> Number <$> number
+       <|> String <$> string
+       <|> Bool <$> bool
+       <?> "expression"
 
 atom :: Parser LAtom
 atom = many1 letter

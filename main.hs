@@ -5,4 +5,4 @@ import Text.Parsec (parseTest)
 main :: IO ()
 main = do
   input <- getContents
-  parseTest list input
+  parseTest expr input

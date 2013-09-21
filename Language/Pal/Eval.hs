@@ -17,6 +17,10 @@ import Language.Pal.Types
 newtype Env = Env { unEnv :: [(LAtom, LValue)] }
   deriving (Show)
 
+lookupAtom :: LAtom -> Env -> Maybe LValue
+lookupAtom a = lookup a . unEnv
+
+
 type Error = String
 
 newtype EvalT m a = EvalT { unEvalT :: EitherT Error (StateT Env m) a }
@@ -54,7 +58,7 @@ apply v _ = throwError $ "not a function: " ++ show v
 atom :: (Applicative m, Monad m) => LAtom -> EvalT m LValue
 atom name = EvalT $ do
   env <- get
-  (lookup name $ unEnv env) ?? ("not found: " ++ name)
+  lookupAtom name env ?? ("not found: " ++ name)
 
 
 data Tag =

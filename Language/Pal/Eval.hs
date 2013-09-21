@@ -2,8 +2,11 @@
 
 module Language.Pal.Eval
   ( eval
+  , Error
   ) where
 
+import Control.Applicative
+import Control.Error
 import Control.Monad.State
 
 import Language.Pal.Types
@@ -12,24 +15,24 @@ import Language.Pal.Types
 newtype Env = Env { unEnv :: [(LAtom, LValue)] }
   deriving (Show)
 
-newtype EvalT m a = EvalT { unEvalT :: StateT Env m a } deriving (Monad, MonadState Env)
+type Error = String
 
-runEvalT :: Monad m => EvalT m a -> Env -> m (a, Env)
-runEvalT = runStateT . unEvalT
+newtype EvalT m a = EvalT { unEvalT :: EitherT Error (StateT Env m) a }
+  deriving (Monad)
+
+runEvalT :: Monad m => EvalT m a -> Env -> m (Either Error a, Env)
+runEvalT = runStateT . runEitherT . unEvalT
 
 
-eval :: Monad m => LValue -> m (LValue, Env)
+eval :: (Applicative m, Monad m) => LValue -> m (Either Error LValue, Env)
 eval val = runEvalT (eval' val) initialEnv
 
-eval' :: Monad m => LValue -> EvalT m LValue
+eval' :: (Applicative m, Monad m) => LValue -> EvalT m LValue
 eval' v@(Number _) = return v
 eval' v@(String _) = return v
 eval' v@(Bool _) = return v
 eval' (List l) = evalForm l
-eval' (Atom name) = do
-    v <- atom name
-    maybe (notFound name) eval' v
-  where notFound = error . ("not found: " ++)
+eval' (Atom name) = atom name
 
 evalForm :: Monad m => LList -> m LValue
 evalForm [Atom "quote", e] = return e
@@ -39,7 +42,7 @@ initialEnv :: Env
 initialEnv = Env [
   ]
 
-atom :: Monad m => LAtom -> EvalT m (Maybe LValue)
-atom name = do
+atom :: (Applicative m, Monad m) => LAtom -> EvalT m LValue
+atom name = EvalT $ do
   env <- get
-  return $ lookup name $ unEnv env
+  (lookup name $ unEnv env) ?? ("not found: " ++ name)

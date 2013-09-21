@@ -26,6 +26,7 @@ expr =    Atom <$> atom
        <|> Number <$> number
        <|> String <$> string
        <|> Bool <$> bool
+       <|> quoted
        <?> "expression"
 
 atom :: Parser LAtom
@@ -39,3 +40,7 @@ string = char '"' *> many (noneOf "\"") <* char '"'
 
 bool :: Parser Bool
 bool = char '#' *> ((char 't' *> pure True) <|> (char 'f' *> pure False))
+
+quoted :: Parser LValue
+quoted = (List . (Atom "quote" :) . singleton) <$> (char '\'' *> expr)
+  where singleton a = [a]

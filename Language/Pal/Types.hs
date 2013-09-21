@@ -4,10 +4,10 @@ module Language.Pal.Types where
 type LList = [LValue]
 
 data LValue = Atom LAtom
-           | List LList
-           | Number LNumber
-           | String LString
-           | Bool Bool
+           | List { lvList :: LList }
+           | Number { lvNumber :: LNumber }
+           | String { lvString :: LString }
+           | Bool { lvBool :: Bool }
 
 instance Show LValue where
   show (Atom a) = a

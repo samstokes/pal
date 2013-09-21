@@ -48,7 +48,7 @@ value =     Atom <$> atom
         <|> Number <$> number
         <|> String <$> string
         <|> Bool <$> bool
-        <?> "atom"
+        <?> "value"
 
 atom :: Parser LAtom
 atom = many1 letter

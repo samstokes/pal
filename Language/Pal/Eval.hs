@@ -10,6 +10,7 @@ import Language.Pal.Types
 
 
 newtype Env = Env { unEnv :: [(LAtom, LValue)] }
+  deriving (Show)
 
 newtype EvalT m a = EvalT { unEvalT :: StateT Env m a } deriving (Monad, MonadState Env)
 

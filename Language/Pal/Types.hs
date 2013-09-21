@@ -26,4 +26,6 @@ type LNumber = Integer
 
 type LString = String
 
+type EvalError = String
+
 type LFunction = [LValue] -> LValue

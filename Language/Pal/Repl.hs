@@ -11,12 +11,12 @@ import Control.Error
 import Control.Monad.Trans (lift)
 import Text.Parsec (parse, ParseError)
 
-import Language.Pal.Eval (Error, eval)
+import Language.Pal.Eval (eval)
 import Language.Pal.Parser (expr)
 import Language.Pal.Types
 
 
-data ReplError = ParseError ParseError | EvalError Error
+data ReplError = ParseError ParseError | EvalError EvalError
   deriving (Show)
 
 rep :: IO ()

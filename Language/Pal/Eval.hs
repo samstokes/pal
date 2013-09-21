@@ -2,7 +2,6 @@
 
 module Language.Pal.Eval
   ( eval
-  , Error
   ) where
 
 import Control.Applicative
@@ -21,16 +20,14 @@ lookupAtom :: LAtom -> Env -> Maybe LValue
 lookupAtom a = lookup a . unEnv
 
 
-type Error = String
+newtype EvalT m a = EvalT { unEvalT :: EitherT EvalError (StateT Env m) a }
+  deriving (Monad, MonadError EvalError)
 
-newtype EvalT m a = EvalT { unEvalT :: EitherT Error (StateT Env m) a }
-  deriving (Monad, MonadError Error)
-
-runEvalT :: Monad m => EvalT m a -> Env -> m (Either Error a, Env)
+runEvalT :: Monad m => EvalT m a -> Env -> m (Either EvalError a, Env)
 runEvalT = runStateT . runEitherT . unEvalT
 
 
-eval :: (Applicative m, Monad m) => LValue -> m (Either Error LValue, Env)
+eval :: (Applicative m, Monad m) => LValue -> m (Either EvalError LValue, Env)
 eval val = runEvalT (eval' val) initialEnv
 
 eval' :: (Applicative m, Monad m) => LValue -> EvalT m LValue

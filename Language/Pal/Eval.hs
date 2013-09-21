@@ -7,6 +7,7 @@ module Language.Pal.Eval
 
 import Control.Applicative
 import Control.Error
+import Control.Monad.Error (MonadError)
 import Control.Monad.State
 
 import Language.Pal.Types
@@ -18,7 +19,7 @@ newtype Env = Env { unEnv :: [(LAtom, LValue)] }
 type Error = String
 
 newtype EvalT m a = EvalT { unEvalT :: EitherT Error (StateT Env m) a }
-  deriving (Monad)
+  deriving (Monad, MonadError Error)
 
 runEvalT :: Monad m => EvalT m a -> Env -> m (Either Error a, Env)
 runEvalT = runStateT . runEitherT . unEvalT

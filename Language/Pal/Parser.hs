@@ -8,29 +8,7 @@ import Text.Parsec.Combinator
 import Text.Parsec.String
 import Text.Parsec ((<?>))
 
-
-type LList = [LValue]
-
-data LValue = Atom LAtom
-           | List LList
-           | Number LNumber
-           | String LString
-           | Bool Bool
-
-instance Show LValue where
-  show (Atom a) = a
-  show (List l) = '(' : unwords (map show l) ++ ")"
-  show (Number n) = show n
-  show (String s) = show s
-  show (Bool True) = "#t"
-  show (Bool False) = "#f"
-
-
-type LAtom = String
-
-type LNumber = Integer
-
-type LString = String
+import Language.Pal.Types
 
 
 list :: Parser LValue

@@ -25,6 +25,10 @@ eval' v@(Number _) = return v
 eval' v@(String _) = return v
 eval' v@(Bool _) = return v
 eval' (List l) = evalForm l
+eval' (Atom name) = do
+    v <- atom name
+    maybe (notFound name) eval' v
+  where notFound = error . ("not found: " ++)
 
 evalForm :: Monad m => LList -> m LValue
 evalForm [Atom "quote", e] = return e
@@ -33,3 +37,8 @@ evalForm [Atom "quote", e] = return e
 initialEnv :: Env
 initialEnv = Env [
   ]
+
+atom :: Monad m => LAtom -> EvalT m (Maybe LValue)
+atom name = do
+  env <- get
+  return $ lookup name $ unEnv env

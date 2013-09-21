@@ -7,5 +7,5 @@ main :: IO ()
 main = do
   input <- getContents
   case parse expr "<stdin>" input of
-    Right v -> print $ eval v
+    Right v -> eval v >>= print . fst
     Left err -> putStrLn $ "parse error: " ++ show err

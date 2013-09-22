@@ -2,6 +2,7 @@
 
 module Language.Pal.Eval
   ( eval
+  , Env, initialEnv
   ) where
 
 import Control.Applicative
@@ -30,8 +31,8 @@ liftEither :: Monad m => Either EvalError a -> EvalT m a
 liftEither = EvalT . hoistEither
 
 
-eval :: (Applicative m, Monad m) => LValue -> m (Either EvalError LValue, Env)
-eval val = runEvalT (eval' val) initialEnv
+eval :: (Applicative m, Monad m) => LValue -> Env -> m (Either EvalError LValue, Env)
+eval val = runEvalT (eval' val)
 
 eval' :: (Applicative m, Monad m) => LValue -> EvalT m LValue
 eval' v@(Number _) = return v

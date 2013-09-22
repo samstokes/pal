@@ -12,7 +12,7 @@ import Control.Error
 import Control.Monad.State
 import Text.Parsec (parse, ParseError)
 
-import Language.Pal.Eval (eval)
+import Language.Pal.Eval (eval, Env, initialEnv)
 import Language.Pal.Parser (expr)
 import Language.Pal.Types
 
@@ -35,22 +35,22 @@ liftEither = ReplT . hoistEither
 
 
 rep :: IO ()
-rep = runReplT rep' >>= handle where
+rep = runReplT (rep' initialEnv) >>= handle where
   handle :: Either ReplError () -> IO ()
   handle (Right ()) = return ()
   handle (Left e) = print e
-  rep' :: ReplT IO ()
-  rep' = do
+  rep' :: Env -> ReplT IO ()
+  rep' env = do
     input <- lift       getContents
     e <- liftEither $   read "<stdin>" input
-    v <-                eval' e
+    v <-                eval' e env
     lift $              print v
 
 
 read :: FilePath -> String -> Either ReplError LValue
 read src = fmapL ParseError . parse expr src
 
-eval' :: (Applicative m, Monad m) => LValue -> ReplT m LValue
-eval' val = do
-  (eOrV, _) <- eval val
+eval' :: (Applicative m, Monad m) => LValue -> Env -> ReplT m LValue
+eval' val env = do
+  (eOrV, _) <- eval val env
   liftEither $ either (throwE . EvalError) Right eOrV

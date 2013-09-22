@@ -17,7 +17,7 @@ instance Show LValue where
   show (String s) = show s
   show (Bool True) = "#t"
   show (Bool False) = "#f"
-  show (Function _) = "#<function>"
+  show (Function (LFunction name _)) = "#<function " ++ name ++ ">"
 
 
 type LAtom = String
@@ -28,4 +28,9 @@ type LString = String
 
 type EvalError = String
 
-type LFunction = [LValue] -> Either EvalError LValue
+type TFunction = [LValue] -> Either EvalError LValue
+
+data LFunction = LFunction {
+    fName :: LAtom
+  , fFunction :: TFunction
+  }

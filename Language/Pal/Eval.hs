@@ -6,7 +6,6 @@ module Language.Pal.Eval
   ) where
 
 import Control.Applicative
-import Control.Arrow (second)
 import Control.Error
 import Control.Monad.Error (MonadError, throwError)
 import Control.Monad.State
@@ -59,7 +58,7 @@ evalForm [] = throwError "can't eval empty list"
 
 
 apply :: Monad m => LValue -> [LValue] -> EvalT m LValue
-apply (Function f) args = liftEither $ f args
+apply (Function (LFunction _ f)) args = liftEither $ f args
 apply v _ = throwError $ "not a function: " ++ show v
 
 
@@ -67,6 +66,10 @@ atom :: (Applicative m, Monad m) => LAtom -> EvalT m LValue
 atom name = EvalT $ do
   env <- get
   lookupAtom name env ?? ("not found: " ++ name)
+
+
+builtin :: LAtom -> TFunction -> (LAtom, LValue)
+builtin name f = (name, Function (LFunction name f))
 
 
 data Tag =
@@ -99,14 +102,14 @@ check t v | tag v == t = Right v
           | otherwise = throwError $ "expected " ++ show t ++ ", got " ++ show (tag v)
 
 
-checkOne :: LFunction
+checkOne :: TFunction
 checkOne [v] = Right v
 checkOne [] = Left "not enough arguments"
 checkOne _ = Left "too many arguments"
 
 
 initialEnv :: Env
-initialEnv = Env $ map (second Function) [
+initialEnv = Env $ map (uncurry builtin) [
     ("+", fmap (Number . sum) . mapM (fmap lvNumber . check TagNumber))
   , ("concat", fmap (String . foldl (++) "") . mapM (fmap lvString . check TagString))
   , ("typeof", fmap (String . show . tag) . checkOne)

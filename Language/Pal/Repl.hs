@@ -9,6 +9,7 @@ module Language.Pal.Repl (
 import Prelude hiding (read)
 import Control.Applicative (Applicative)
 import Control.Error
+import Control.Monad.Trans
 import Text.Parsec (parse, ParseError)
 
 import Language.Pal.Eval (eval, Env, initialEnv)

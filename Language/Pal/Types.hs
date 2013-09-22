@@ -3,7 +3,7 @@ module Language.Pal.Types where
 
 type LList = [LValue]
 
-data LValue = Atom LAtom
+data LValue = Atom { lvAtom :: LAtom }
            | List { lvList :: LList }
            | Number { lvNumber :: LNumber }
            | String { lvString :: LString }

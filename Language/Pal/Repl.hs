@@ -9,7 +9,7 @@ module Language.Pal.Repl (
 import Prelude hiding (read)
 import Control.Applicative (Applicative)
 import Control.Error
-import Control.Monad.Trans
+import Control.Monad.State
 import Text.Parsec (parse, ParseError)
 
 import Language.Pal.Eval (eval, Env, initialEnv)
@@ -21,28 +21,29 @@ data ReplError = ParseError ParseError | EvalError EvalError
   deriving (Show)
 
 
-newtype ReplT m a = ReplT { unReplT :: EitherT ReplError m a }
-  deriving (Monad, Applicative, Functor)
+newtype ReplT m a = ReplT { unReplT :: EitherT ReplError (StateT Env m) a }
+  deriving (Monad, Applicative, Functor, MonadState Env)
 
 instance MonadTrans ReplT where
-  lift = ReplT . lift
+  lift = ReplT . lift . lift
 
-runReplT :: Monad m => ReplT m a -> m (Either ReplError a)
-runReplT = runEitherT . unReplT
+runReplT :: Monad m => ReplT m a -> Env -> m (Either ReplError a, Env)
+runReplT = runStateT . runEitherT . unReplT
 
 liftEither :: Monad m => Either ReplError a -> ReplT m a
 liftEither = ReplT . hoistEither
 
 
 rep :: IO ()
-rep = runReplT (rep' initialEnv) >>= handle where
-  handle :: Either ReplError () -> IO ()
-  handle = either print return
-  rep' :: Env -> ReplT IO ()
-  rep' env = do
+rep = runReplT rep' initialEnv >>= void . handle where
+  handle :: (Either ReplError (), Env) -> IO Env
+  handle (eOrV, env') = either print return eOrV >> return env'
+  rep' :: ReplT IO ()
+  rep' = do
     input <- lift       getContents
     e <- liftEither $   read "<stdin>" input
-    v <-                eval' e env
+    theEnv <- get
+    v <-                eval' e theEnv
     lift $              print v
 
 
@@ -51,5 +52,6 @@ read src = fmapL ParseError . parse expr src
 
 eval' :: (Applicative m, Monad m) => LValue -> Env -> ReplT m LValue
 eval' val env = do
-  (eOrV, _) <- eval val env
+  (eOrV, env') <- eval val env
+  put env'
   liftEither $ either (throwE . EvalError) Right eOrV

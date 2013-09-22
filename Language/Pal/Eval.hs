@@ -2,7 +2,7 @@
 
 module Language.Pal.Eval
   ( eval
-  , Env, initialEnv
+  , initialEnv
   ) where
 
 import Control.Applicative
@@ -11,16 +11,6 @@ import Control.Monad.Error (MonadError, throwError)
 import Control.Monad.State
 
 import Language.Pal.Types
-
-
-newtype Env = Env { unEnv :: [(LAtom, LValue)] }
-  deriving (Show)
-
-lookupAtom :: LAtom -> Env -> Maybe LValue
-lookupAtom a = lookup a . unEnv
-
-setAtom :: LAtom -> LValue -> Env -> Env
-setAtom k v = Env . ((k, v) :) . unEnv
 
 
 newtype EvalT m a = EvalT { unEvalT :: EitherT EvalError (StateT Env m) a }

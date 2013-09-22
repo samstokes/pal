@@ -13,7 +13,7 @@ import Control.Monad.State
 import System.IO (isEOF)
 import Text.Parsec (parse, ParseError)
 
-import Language.Pal.Eval (eval, Env, initialEnv)
+import Language.Pal.Eval (eval, initialEnv)
 import Language.Pal.Parser (expr)
 import Language.Pal.Types
 

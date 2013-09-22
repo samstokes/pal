@@ -28,6 +28,17 @@ type LString = String
 
 type EvalError = String
 
+
+newtype Env = Env { unEnv :: [(LAtom, LValue)] }
+  deriving (Show)
+
+lookupAtom :: LAtom -> Env -> Maybe LValue
+lookupAtom a = lookup a . unEnv
+
+setAtom :: LAtom -> LValue -> Env -> Env
+setAtom k v = Env . ((k, v) :) . unEnv
+
+
 type TFunction = [LValue] -> Either EvalError LValue
 
 data LFunction = LFunction {

@@ -35,16 +35,14 @@ liftEither = ReplT . hoistEither
 
 
 rep :: IO ()
-rep = runReplT rep' initialEnv >>= void . handle where
-  handle :: (Either ReplError (), Env) -> IO Env
-  handle (eOrV, env') = either print return eOrV >> return env'
-  rep' :: ReplT IO ()
-  rep' = do
-    input <- lift       getContents
-    e <- liftEither $   read "<stdin>" input
+rep = runReplT (rep' =<< lift getContents) initialEnv >>= void . handle where
+  handle :: (Either ReplError LValue, Env) -> IO Env
+  handle (eOrV, env') = either print print eOrV >> return env'
+  rep' :: String -> ReplT IO LValue
+  rep' input = do
+    e <- liftEither $ read "<stdin>" input
     theEnv <- get
-    v <-                eval' e theEnv
-    lift $              print v
+    eval' e theEnv
 
 
 read :: FilePath -> String -> Either ReplError LValue

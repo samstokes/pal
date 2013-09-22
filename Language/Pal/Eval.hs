@@ -20,9 +20,12 @@ newtype Env = Env { unEnv :: [(LAtom, LValue)] }
 lookupAtom :: LAtom -> Env -> Maybe LValue
 lookupAtom a = lookup a . unEnv
 
+setAtom :: LAtom -> LValue -> Env -> Env
+setAtom k v = Env . ((k, v) :) . unEnv
+
 
 newtype EvalT m a = EvalT { unEvalT :: EitherT EvalError (StateT Env m) a }
-  deriving (Monad, MonadError EvalError)
+  deriving (Monad, MonadError EvalError, MonadState Env)
 
 runEvalT :: Monad m => EvalT m a -> Env -> m (Either EvalError a, Env)
 runEvalT = runStateT . runEitherT . unEvalT
@@ -44,6 +47,10 @@ eval' v@(Function _) = return v
 
 evalForm :: (Applicative m, Monad m) => LList -> EvalT m LValue
 evalForm [Atom "quote", e] = return e
+evalForm [Atom "set!", Atom v, e] = do
+  rval <- eval' e
+  modify (setAtom v rval)
+  return rval
 evalForm (funExp : argExps) = do
   fun <- eval' funExp
   args <- mapM eval' argExps

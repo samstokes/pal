@@ -86,6 +86,11 @@ tag (String _) = TagString
 tag (Bool _) = TagBool
 tag (Function _) = TagFunction
 
+check :: Tag -> LValue -> Either EvalError LValue
+check t v | tag v == t = Right v
+          | otherwise = throwError $ "expected " ++ show t ++ ", got " ++ show (tag v)
+
+
 checkOne :: LFunction
 checkOne [v] = Right v
 checkOne [] = Left "not enough arguments"
@@ -94,8 +99,8 @@ checkOne _ = Left "too many arguments"
 
 initialEnv :: Env
 initialEnv = Env $ map (second Function) [
-    ("+", Right . Number . sum . map lvNumber)
-  , ("concat", Right . String . foldl (++) "" . map lvString)
+    ("+", fmap (Number . sum) . mapM (fmap lvNumber . check TagNumber))
+  , ("concat", fmap (String . foldl (++) "") . mapM (fmap lvString . check TagString))
   , ("typeof", fmap (String . show . tag) . checkOne)
   , ("numberp", fmap (Bool . (== TagNumber) . tag) . checkOne)
   ]

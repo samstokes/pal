@@ -3,13 +3,14 @@
 
 module Language.Pal.Repl (
     ReplError
-  , rep
+  , repl
   ) where
 
 import Prelude hiding (read)
 import Control.Applicative (Applicative)
 import Control.Error
 import Control.Monad.State
+import System.IO (isEOF)
 import Text.Parsec (parse, ParseError)
 
 import Language.Pal.Eval (eval, Env, initialEnv)
@@ -34,12 +35,21 @@ liftEither :: Monad m => Either ReplError a -> ReplT m a
 liftEither = ReplT . hoistEither
 
 
-rep :: IO ()
-rep = runReplT (rep' =<< lift getContents) initialEnv >>= void . handle where
+repl :: IO ()
+repl = repl' initialEnv where
+  repl' env = do
+    eof <- isEOF
+    unless eof $ do
+      env' <- rep env =<< getLine
+      repl' env'
+
+
+rep :: Env -> String -> IO Env
+rep env input = runReplT rep' env >>= handle where
   handle :: (Either ReplError LValue, Env) -> IO Env
   handle (eOrV, env') = either print print eOrV >> return env'
-  rep' :: String -> ReplT IO LValue
-  rep' input = do
+  rep' :: ReplT IO LValue
+  rep' = do
     e <- liftEither $ read "<stdin>" input
     theEnv <- get
     eval' e theEnv

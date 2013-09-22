@@ -36,8 +36,7 @@ liftEither = ReplT . hoistEither
 rep :: IO ()
 rep = runReplT (rep' initialEnv) >>= handle where
   handle :: Either ReplError () -> IO ()
-  handle (Right ()) = return ()
-  handle (Left e) = print e
+  handle = either print return
   rep' :: Env -> ReplT IO ()
   rep' env = do
     input <- lift       getContents

@@ -40,19 +40,21 @@ repl = repl' initialEnv where
   repl' env = do
     eof <- isEOF
     unless eof $ do
-      env' <- rep env =<< getLine
+      line <- getLine
+      (eOrV, env') <- runReplT (repSavingLast line) env
+      either print print eOrV
       repl' env'
+  repSavingLast line = do
+    lastVal <- rep line
+    modify (setAtom "_" lastVal)
+    return lastVal
 
 
-rep :: Env -> String -> IO Env
-rep env input = runReplT rep' env >>= handle where
-  handle :: (Either ReplError LValue, Env) -> IO Env
-  handle (eOrV, env') = either print print eOrV >> return env'
-  rep' :: ReplT IO LValue
-  rep' = do
-    e <- liftEither $ read "<stdin>" input
-    theEnv <- get
-    eval' e theEnv
+rep :: (Applicative m, Monad m) => String -> ReplT m LValue
+rep input = do
+  e <- liftEither $ read "<stdin>" input
+  theEnv <- get
+  eval' e theEnv
 
 
 read :: FilePath -> String -> Either ReplError LValue

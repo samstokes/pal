@@ -58,7 +58,7 @@ evalForm [Atom "set!", Atom v, e] = do
   modify (setAtom v rval)
   return rval
 evalForm (Atom "lambda" : List params : body) = do
-  paramNames <- liftEither $ mapM (fmap lvAtom . check TagSymbol) params
+  paramNames <- liftEither $ mapM coerceAtom params
   scope <- get
   return $ LispFunction LLispFunction {
       lfScope = scope
@@ -123,6 +123,13 @@ check :: Tag -> LValue -> Either EvalError LValue
 check t v | tag v == t = Right v
           | otherwise = throwError $ "expected " ++ show t ++ ", got " ++ show (tag v)
 
+coerceAtom :: LValue -> Either EvalError LAtom
+coerceAtom = fmap lvAtom . check TagSymbol
+coerceNumber :: LValue -> Either EvalError LNumber
+coerceNumber = fmap lvNumber . check TagNumber
+coerceString :: LValue -> Either EvalError LString
+coerceString = fmap lvString . check TagString
+
 
 checkOne :: TFunction
 checkOne = fmap head . flip checkSameLength [undefined]
@@ -138,8 +145,8 @@ checkSameLength actual expected
 
 initialEnv :: Env
 initialEnv = Env $ map (uncurry builtin) [
-    ("+", fmap (Number . sum) . mapM (fmap lvNumber . check TagNumber))
-  , ("concat", fmap (String . foldl (++) "") . mapM (fmap lvString . check TagString))
+    ("+", fmap (Number . sum) . mapM coerceNumber)
+  , ("concat", fmap (String . foldl (++) "") . mapM coerceString)
   , ("typeof", fmap (String . show . tag) . checkOne)
   , ("numberp", fmap (Bool . (== TagNumber) . tag) . checkOne)
   ]

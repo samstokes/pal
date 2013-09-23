@@ -126,7 +126,7 @@ tag (LispFunction _) = TagFunction
 builtinTagPred :: Tag -> (LAtom, LValue)
 builtinTagPred t = (name, BuiltinFunction (LBuiltinFunction name p)) where
   name = show t ++ "?"
-  p = fmap (Bool . (== t) . tag . head) . checkN 1
+  p = unop ((== t) . tag) Bool return
 
 check :: Tag -> LValue -> Either EvalError LValue
 check t v | tag v == t = Right v
@@ -145,6 +145,12 @@ coerceBool = fmap lvBool . check TagBool
 checkN :: Int -> [a] -> Either EvalError [a]
 checkN n = fmap (take n) . flip checkSameLength (replicate n undefined)
 
+unop :: (a -> b) -> (b -> LValue) -> (LValue -> Either EvalError a) -> [LValue] -> Either EvalError LValue
+unop f outputCtor inputCoercion = fmap (outputCtor . f) . inputCoercion <=< fmap head . checkN 1
+
+varop :: ([a] -> b) -> (b -> LValue) -> (LValue -> Either EvalError a) -> [LValue] -> Either EvalError LValue
+varop f outputCtor inputCoercion = fmap (outputCtor . f) . mapM inputCoercion
+
 
 checkSameLength :: [a] -> [b] -> Either EvalError [a]
 checkSameLength actual expected
@@ -156,9 +162,9 @@ checkSameLength actual expected
 
 initialEnv :: Env
 initialEnv = Env $ map (uncurry builtin) [
-    ("+", fmap (Number . sum) . mapM coerceNumber)
-  , ("concat", fmap (String . foldl (++) "") . mapM coerceString)
-  , ("typeof", fmap (String . show . tag . head) . checkN 1)
+    ("+", varop sum Number coerceNumber)
+  , ("concat", varop concat String coerceString)
+  , ("typeof", unop (show . tag) String return)
   ] ++ map builtinTagPred [
     TagSymbol
   , TagList

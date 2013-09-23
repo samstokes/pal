@@ -80,7 +80,7 @@ apply :: (Applicative m, Monad m) => LValue -> [LValue] -> EvalT m LValue
 apply (BuiltinFunction (LBuiltinFunction _ f)) args = liftEither $ f args
 apply (LispFunction (LLispFunction scope params body)) args = do
     _ <- liftEither $ params `checkSameLength` args
-    localEnv (const fnScope) $ foldM (const . eval') nil body
+    localEnv (const fnScope) $ foldM (\_ e -> eval' e) nil body
   where
     fnScope = argBindings <> scope
     argBindings = Env $ zip params args

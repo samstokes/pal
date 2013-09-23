@@ -119,6 +119,11 @@ tag (Bool _) = TagBool
 tag (BuiltinFunction _) = TagFunction
 tag (LispFunction _) = TagFunction
 
+builtinTagPred :: Tag -> (LAtom, LValue)
+builtinTagPred t = (name, BuiltinFunction (LBuiltinFunction name p)) where
+  name = show t ++ "?"
+  p = fmap (Bool . (== t) . tag . head) . checkN 1
+
 check :: Tag -> LValue -> Either EvalError LValue
 check t v | tag v == t = Right v
           | otherwise = throwError $ "expected " ++ show t ++ ", got " ++ show (tag v)
@@ -148,5 +153,11 @@ initialEnv = Env $ map (uncurry builtin) [
     ("+", fmap (Number . sum) . mapM coerceNumber)
   , ("concat", fmap (String . foldl (++) "") . mapM coerceString)
   , ("typeof", fmap (String . show . tag . head) . checkN 1)
-  , ("numberp", fmap (Bool . (== TagNumber) . tag . head) . checkN 1)
+  ] ++ map builtinTagPred [
+    TagSymbol
+  , TagList
+  , TagNumber
+  , TagString
+  , TagBool
+  , TagFunction
   ]

@@ -131,8 +131,8 @@ coerceString :: LValue -> Either EvalError LString
 coerceString = fmap lvString . check TagString
 
 
-checkOne :: TFunction
-checkOne = fmap head . flip checkSameLength [undefined]
+checkN :: Int -> [a] -> Either EvalError [a]
+checkN n = fmap (take n) . flip checkSameLength (replicate n undefined)
 
 
 checkSameLength :: [a] -> [b] -> Either EvalError [a]
@@ -147,6 +147,6 @@ initialEnv :: Env
 initialEnv = Env $ map (uncurry builtin) [
     ("+", fmap (Number . sum) . mapM coerceNumber)
   , ("concat", fmap (String . foldl (++) "") . mapM coerceString)
-  , ("typeof", fmap (String . show . tag) . checkOne)
-  , ("numberp", fmap (Bool . (== TagNumber) . tag) . checkOne)
+  , ("typeof", fmap (String . show . tag . head) . checkN 1)
+  , ("numberp", fmap (Bool . (== TagNumber) . tag . head) . checkN 1)
   ]

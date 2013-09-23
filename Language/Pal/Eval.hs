@@ -57,6 +57,10 @@ evalForm [Atom "set!", Atom v, e] = do
   rval <- eval' e
   modify (setAtom v rval)
   return rval
+evalForm [Atom "if", condExpr, thenExpr, elseExpr] = do
+  cond <- eval' condExpr
+  b <- liftEither $ coerceBool cond
+  if b then eval' thenExpr else eval' elseExpr
 evalForm (Atom "lambda" : List params : body) = do
   paramNames <- liftEither $ mapM coerceAtom params
   scope <- get
@@ -134,6 +138,8 @@ coerceNumber :: LValue -> Either EvalError LNumber
 coerceNumber = fmap lvNumber . check TagNumber
 coerceString :: LValue -> Either EvalError LString
 coerceString = fmap lvString . check TagString
+coerceBool :: LValue -> Either EvalError Bool
+coerceBool = fmap lvBool . check TagBool
 
 
 checkN :: Int -> [a] -> Either EvalError [a]

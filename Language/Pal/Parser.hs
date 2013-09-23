@@ -33,7 +33,7 @@ atom :: Parser LAtom
 atom = many1 $ oneOf symbolChars
 
 symbolChars :: String
-symbolChars = ['a'..'z'] ++ ['A'..'Z'] ++ "+-_!?"
+symbolChars = ['a'..'z'] ++ ['A'..'Z'] ++ "+-*/_!?<>"
 
 number :: Parser LNumber
 number = read <$> many1 digit

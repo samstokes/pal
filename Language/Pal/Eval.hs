@@ -148,6 +148,11 @@ checkN n = fmap (take n) . flip checkSameLength (replicate n undefined)
 unop :: (a -> b) -> (b -> LValue) -> (LValue -> Either EvalError a) -> [LValue] -> Either EvalError LValue
 unop f outputCtor inputCoercion = fmap (outputCtor . f) . inputCoercion <=< fmap head . checkN 1
 
+binop :: (a -> a -> b) -> (b -> LValue) -> (LValue -> Either EvalError a) -> [LValue] -> Either EvalError LValue
+binop f outputCtor inputCoercion = fmap (outputCtor . apply2) . mapM inputCoercion <=< checkN 2
+  where apply2 [x, y] = f x y
+        apply2 xs = error $ "binop called with " ++ show (length xs) ++ " arguments!"
+
 varop :: ([a] -> b) -> (b -> LValue) -> (LValue -> Either EvalError a) -> [LValue] -> Either EvalError LValue
 varop f outputCtor inputCoercion = fmap (outputCtor . f) . mapM inputCoercion
 
@@ -163,6 +168,11 @@ checkSameLength actual expected
 initialEnv :: Env
 initialEnv = Env $ map (uncurry builtin) [
     ("+", varop sum Number coerceNumber)
+  , ("-", binop (-) Number coerceNumber)
+  , ("*", varop product Number coerceNumber)
+  , ("/", binop div Number coerceNumber)
+  , ("<", binop (<) Bool coerceNumber)
+  , (">", binop (>) Bool coerceNumber)
   , ("concat", varop concat String coerceString)
   , ("typeof", unop (show . tag) String return)
   ] ++ map builtinTagPred [

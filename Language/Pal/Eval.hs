@@ -9,6 +9,7 @@ import Control.Applicative
 import Control.Error
 import Control.Monad.Error (MonadError, throwError)
 import Control.Monad.State
+import Data.Monoid ((<>))
 
 import Language.Pal.Types
 
@@ -16,8 +17,23 @@ import Language.Pal.Types
 newtype EvalT m a = EvalT { unEvalT :: EitherT EvalError (StateT Env m) a }
   deriving (Monad, MonadError EvalError, MonadState Env)
 
+instance MonadTrans EvalT where
+  lift = EvalT . lift . lift
+
+unpackStateT :: EvalT m a -> StateT Env m (Either EvalError a)
+unpackStateT = runEitherT . unEvalT
+
 runEvalT :: Monad m => EvalT m a -> Env -> m (Either EvalError a, Env)
-runEvalT = runStateT . runEitherT . unEvalT
+runEvalT = runStateT . unpackStateT
+
+evalEvalT :: Monad m => EvalT m a -> Env -> m (Either EvalError a)
+evalEvalT = evalStateT . unpackStateT
+
+localEnv :: Monad m => (Env -> Env) -> EvalT m a -> EvalT m a
+localEnv f e = do
+  modifiedEnv <- gets f
+  eOrV <- lift $ evalEvalT e modifiedEnv
+  liftEither eOrV
 
 liftEither :: Monad m => Either EvalError a -> EvalT m a
 liftEither = EvalT . hoistEither
@@ -32,7 +48,8 @@ eval' v@(String _) = return v
 eval' v@(Bool _) = return v
 eval' (List l) = evalForm l
 eval' (Atom name) = atom name
-eval' v@(Function _) = return v
+eval' v@(BuiltinFunction _) = return v
+eval' v@(LispFunction _) = return v
 
 evalForm :: (Applicative m, Monad m) => LList -> EvalT m LValue
 evalForm [Atom "quote", e] = return e
@@ -40,6 +57,14 @@ evalForm [Atom "set!", Atom v, e] = do
   rval <- eval' e
   modify (setAtom v rval)
   return rval
+evalForm (Atom "lambda" : List params : body) = do
+  paramNames <- liftEither $ mapM (fmap lvAtom . check TagSymbol) params
+  scope <- get
+  return $ LispFunction LLispFunction {
+      lfScope = scope
+    , lfParams = paramNames
+    , lfBody = body
+    }
 evalForm (funExp : argExps) = do
   fun <- eval' funExp
   args <- mapM eval' argExps
@@ -47,8 +72,14 @@ evalForm (funExp : argExps) = do
 evalForm [] = throwError "can't eval empty list"
 
 
-apply :: Monad m => LValue -> [LValue] -> EvalT m LValue
-apply (Function (LFunction _ f)) args = liftEither $ f args
+apply :: (Applicative m, Monad m) => LValue -> [LValue] -> EvalT m LValue
+apply (BuiltinFunction (LBuiltinFunction _ f)) args = liftEither $ f args
+apply (LispFunction (LLispFunction scope params body)) args = do
+    _ <- liftEither $ params `checkSameLength` args
+    localEnv (const fnScope) $ foldM (const . eval') nil body
+  where
+    fnScope = argBindings <> scope
+    argBindings = Env $ zip params args
 apply v _ = throwError $ "not a function: " ++ show v
 
 
@@ -59,7 +90,7 @@ atom name = EvalT $ do
 
 
 builtin :: LAtom -> TFunction -> (LAtom, LValue)
-builtin name f = (name, Function (LFunction name f))
+builtin name f = (name, BuiltinFunction (LBuiltinFunction name f))
 
 
 data Tag =
@@ -85,7 +116,8 @@ tag (List _) = TagList
 tag (Number _) = TagNumber
 tag (String _) = TagString
 tag (Bool _) = TagBool
-tag (Function _) = TagFunction
+tag (BuiltinFunction _) = TagFunction
+tag (LispFunction _) = TagFunction
 
 check :: Tag -> LValue -> Either EvalError LValue
 check t v | tag v == t = Right v
@@ -93,9 +125,15 @@ check t v | tag v == t = Right v
 
 
 checkOne :: TFunction
-checkOne [v] = Right v
-checkOne [] = Left "not enough arguments"
-checkOne _ = Left "too many arguments"
+checkOne = fmap head . flip checkSameLength [undefined]
+
+
+checkSameLength :: [a] -> [b] -> Either EvalError [a]
+checkSameLength actual expected
+    | nAct == nExp = Right actual
+    | nAct <  nExp = Left $ "not enough arguments: expected " ++ show nExp ++ ", got " ++ show nAct
+    | otherwise    = Left $ "too many arguments: expected " ++ show nExp ++ ", got " ++ show nAct
+        where nAct = length actual; nExp = length expected
 
 
 initialEnv :: Env

@@ -1,14 +1,22 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 module Language.Pal.Types where
+
+import Data.Monoid
 
 
 type LList = [LValue]
+
+nil :: LValue
+nil = List []
 
 data LValue = Atom { lvAtom :: LAtom }
            | List { lvList :: LList }
            | Number { lvNumber :: LNumber }
            | String { lvString :: LString }
            | Bool { lvBool :: Bool }
-           | Function { lvFunction :: LFunction }
+           | BuiltinFunction { lvBIFunction :: LBuiltinFunction }
+           | LispFunction { lvLFunction :: LLispFunction }
 
 instance Show LValue where
   show (Atom a) = a
@@ -17,7 +25,8 @@ instance Show LValue where
   show (String s) = show s
   show (Bool True) = "#t"
   show (Bool False) = "#f"
-  show (Function (LFunction name _)) = "#<function " ++ name ++ ">"
+  show (BuiltinFunction (LBuiltinFunction name _)) = "#<function " ++ name ++ ">"
+  show (LispFunction (LLispFunction _ params _)) = "#<function lambda (" ++ unwords params ++ ")>"
 
 
 type LAtom = String
@@ -30,7 +39,7 @@ type EvalError = String
 
 
 newtype Env = Env { unEnv :: [(LAtom, LValue)] }
-  deriving (Show)
+  deriving (Show, Monoid)
 
 lookupAtom :: LAtom -> Env -> Maybe LValue
 lookupAtom a = lookup a . unEnv
@@ -41,7 +50,13 @@ setAtom k v = Env . ((k, v) :) . unEnv
 
 type TFunction = [LValue] -> Either EvalError LValue
 
-data LFunction = LFunction {
-    fName :: LAtom
-  , fFunction :: TFunction
+data LBuiltinFunction = LBuiltinFunction {
+    bfName :: LAtom
+  , bfFunction :: TFunction
+  }
+
+data LLispFunction = LLispFunction {
+    lfScope :: Env
+  , lfParams :: [LAtom]
+  , lfBody :: [LValue]
   }
